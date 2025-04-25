@@ -5,6 +5,8 @@ import Form from './components/Form';
 import UsersList from './components/UsersList';
 import { fetchUsers, LogIn } from './services/usersService';
 import Login from './components/Login';
+import { updateUser } from './services/usersService';
+import EditUser from './components/Edit/EditUser';
 
 interface AppState {
     currentUser: User | null;
@@ -24,6 +26,7 @@ function App() {
     const [newUsersNumber, setNewUsersNumber] = useState<AppState['newUsersNumber']>(0);
     const [isLoggedIn, setIsLoggedIn] = useState<AppState['isLoggedIn']>(false);
     const [currentUser, setCurrentUser] = useState<AppState['currentUser']>(null);
+    const [editingUser, setEditingUser] = useState<User | null>(null); 
 
     const [uiState, setUiState] = useState<UIState>({
         isDarkMode: false,
@@ -94,20 +97,33 @@ function App() {
             alert('Login failed. Please check your credentials.');
         }
     };
+    const handleSaveEditedUser = async (updatedUser: User) => {
+        try {
+            const response = await updateUser(updatedUser); 
+            if (response === 200 || response === 201) {
+                setUsers((prevUsers) =>
+                    prevUsers.map((u) => (u._id === updatedUser._id ? updatedUser : u))
+                );
+                setEditingUser(null); 
+            }
+            setEditingUser(null); 
+        } catch (error) {
+            alert('Error updating user.');
+        }
+    };
 
     return (
         <div className="App" ref={divRef}>
-            {/* Notification Popup */}
             {uiState.showNotification && (
                 <div className={`notification ${uiState.isDarkMode ? 'dark' : 'light'}`}>
                     User <strong>{uiState.newUserName}</strong> has been created successfully!
                 </div>
             )}
-
+    
             <button onClick={toggleDarkMode} className="toggleButton">
                 {uiState.isDarkMode ? 'Light Mode' : 'Dark Mode'}
             </button>
-
+    
             <div className="content">
                 {!isLoggedIn ? (
                     <Login
@@ -116,14 +132,21 @@ function App() {
                 ) : (
                     <>
                         <h2>Bienvenido, {currentUser?.name}!</h2>
-                        <UsersList users={users} />
+                        <UsersList users={users} onEditUser={setEditingUser} />
                         <p>New users: {newUsersNumber}</p>
                         <Form onNewUser={handleNewUser} />
+                        {editingUser && (
+                            <EditUser
+                                user={editingUser}
+                                onSave={handleSaveEditedUser}
+                                onCancel={() => setEditingUser(null)}
+                            />
+                        )}
                     </>
                 )}
             </div>
         </div>
-    );
+    );    
 }
 
 export default App;
